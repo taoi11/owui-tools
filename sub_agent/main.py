@@ -5,6 +5,7 @@ title: Sub-Agent Tools
 from typing import Dict, List
 from pydantic import BaseModel, Field
 import requests
+import asyncio
 
 class Tools:
     def __init__(self):
@@ -18,20 +19,21 @@ class Tools:
         api_key: str = Field("", description="API key for the LiteLLM endpoint (if needed)")
         timeout_seconds: int = Field(60, description="Timeout for API calls in seconds")
 
-    def sub_agent(
+    async def sub_agent(
         self, 
         query: str, 
         system_message: str = "You are a helpful assistant.", 
         model: str = Field(
             None, 
             description="One of the following `sonnet-3.7`, `r1-1776`, `sonar-pro`, `sonar-deep-research`. "
-        )
+        ),
+        __event_emitter__=None
     ) -> str:
         """
         Makes a call to big LLMs off premise to off load complex and beyond your capabilities tasks.
         
         :param query: The query/prompt to send to the LLM
-        :param system_message: System message to provide context to the model
+        :param system_message: System message provides the agent with high level instructions.
         :param model: One of the following `sonnet-3.7` - Code generation tasks; `r1-1776` - Deep thoughtful reasoning; `sonar-pro` - Grounded by internet search. Fact-checking and fresh knowledge based tasks; `sonar-deep-research` - Grounded by internet search. optimized for deep research, analysis, and scholarly content.
         :return: The LLM's response text
         """
@@ -40,6 +42,12 @@ class Tools:
         api_endpoint = f"{base_url}/chat/completions"
         api_key = self.valves.api_key
         timeout = self.valves.timeout_seconds
+        
+        if __event_emitter__:
+            await __event_emitter__({
+                "type": "status",
+                "data": {"description": "Preparing to call external LLM...", "done": False}
+            })
         
         # Prepare the API request
         headers = {
@@ -61,8 +69,19 @@ class Tools:
         # Only add the model if it's provided
         if model:
             payload["model"] = model
+            if __event_emitter__:
+                await __event_emitter__({
+                    "type": "status",
+                    "data": {"description": f"Using model: {model}", "done": False}
+                })
         
         try:
+            if __event_emitter__:
+                await __event_emitter__({
+                    "type": "status",
+                    "data": {"description": "Sending request to external LLM...", "done": False}
+                })
+                
             # Standard request
             response = requests.post(
                 api_endpoint, 
@@ -72,15 +91,40 @@ class Tools:
             )
             
             if response.status_code == 200:
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": "Successfully received response from external LLM", "done": True}
+                    })
+                    
                 result = response.json()
                 response_text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
                 return response_text
             else:
                 error_msg = f"API Error: {response.status_code} - {response.text}"
+                
+                if __event_emitter__:
+                    await __event_emitter__({
+                        "type": "status",
+                        "data": {"description": f"Error: {error_msg}", "done": True}
+                    })
+                    
                 return f"Error calling sub-agent: {error_msg}"
                 
         except requests.exceptions.Timeout:
+            if __event_emitter__:
+                await __event_emitter__({
+                    "type": "status",
+                    "data": {"description": "Error: Request timed out", "done": True}
+                })
+                
             return "Error: Request timed out"
         
         except requests.exceptions.RequestException as e:
+            if __event_emitter__:
+                await __event_emitter__({
+                    "type": "status",
+                    "data": {"description": f"Error: {str(e)}", "done": True}
+                })
+                
             return f"Error: Request failed: {str(e)}"
