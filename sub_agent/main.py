@@ -31,12 +31,23 @@ class Tools:
         __event_emitter__=None,
     ) -> str:
         """
-        Makes a call to big LLMs off premise to offload complex and beyond your capabilities tasks.
+        Sends queries to powerful external large language models for tasks beyond your capabilities.
+        
+        Use this tool when you:
+        - Need to write complex code or solve advanced programming problems use sonnet-3.7
+        - Need to search the web for current information, use sonar-pro with a simple question in the prompt
+        - Need a well researched answer from the internet, use sonar-pro with multiple questions in the prompt
+        
+        Best practices:
+        - Keep system_message concise but specific about the desired output format and approach
+        - For code generation, specify language, frameworks, and expected functionality
+        - For web searches, include specific keywords and time-sensitive context if relevant
+        - Avoid chaining multiple unrelated topics in a single query
 
-        :param query: The query/prompt to send to the LLM (required)
-        :param model: Model to use, one of, 'sonnet-3.7' code generation agent; 'sonar-pro' internet search agent (required)
-        :param system_message: System message provides the agent with high level instructions (required)
-        :return: The response from the external LLM
+        :param query: The detailed instructions or question for the external model
+        :param model: one of `sonar-pro`, `sonar-3.7`
+        :param system_message: Instructions that guide the external model's behavior and approach
+        :return: The complete response from the external model
         """
         # Construct the complete chat completions API endpoint
         api_endpoint = f"{self.valves.base_url.rstrip('/')}/chat/completions"
