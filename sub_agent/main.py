@@ -44,9 +44,9 @@ class Tools:
         - For web searches, include specific keywords and time-sensitive context if relevant
         - Avoid chaining multiple unrelated topics in a single query
 
-        :param query: The detailed instructions or question for the external model
-        :param model: OpenRouter model identifier
-        :param system_message: Instructions that guide the external model's behavior and approach
+        :param query: The detailed instructions or question for the external model (required)
+        :param model: OpenRouter model identifier (required)
+        :param system_message: Instructions that guide the external model's behavior and approach (optional)
         :return: The complete response from the external model
         """
 
