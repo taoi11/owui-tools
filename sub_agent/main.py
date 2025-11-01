@@ -15,8 +15,8 @@ class Tools:
         """Admin-configurable settings."""
 
         base_url: str = Field(
-            "http://litellm:4000/v1",
-            description="LiteLLM API base URL (e.g., http://litellm:4000/v1)",
+            "https://openrouter.ai/api/v1",
+            description="OpenRouter API base URL",
         )
         api_key: str = Field(
             "", description="API key for the LiteLLM endpoint (if needed)"
@@ -32,12 +32,12 @@ class Tools:
     ) -> str:
         """
         Sends queries to powerful external large language models for tasks beyond your capabilities.
-        
-        Use this tool when you:
-        - Need to write complex code or solve advanced programming problems use sonnet-3.7
-        - Need to search the web for current information, use sonar-pro with a simple question in the prompt
-        - Need a well researched answer from the internet, use sonar-pro with multiple questions in the prompt
-        
+
+        Model Selection Guide:
+        - Need to write complex code or solve advanced programming problems use "anthropic/claude-sonnet-4.5"
+        - Need to search the web for current information, use "perplexity/sonar" with a simple question in the prompt
+        - Need a well researched answer from the internet, use "perplexity/sonar" with multiple simple but related questions or one complex question
+
         Best practices:
         - Keep system_message concise but specific about the desired output format and approach
         - For code generation, specify language, frameworks, and expected functionality
@@ -45,10 +45,21 @@ class Tools:
         - Avoid chaining multiple unrelated topics in a single query
 
         :param query: The detailed instructions or question for the external model
-        :param model: one of `sonar-pro`, `sonar-3.7`
+        :param model: OpenRouter model identifier
         :param system_message: Instructions that guide the external model's behavior and approach
         :return: The complete response from the external model
         """
+
+        # Safety check: only allow predefined models
+        allowed_models = [
+            "anthropic/claude-sonnet-4.5",
+            "perplexity/sonar",
+            "perplexity/sonar-pro",
+        ]
+        
+        if model not in allowed_models:
+            return f"Error: Model '{model}' is not in the allowed list. Allowed models: {', '.join(allowed_models)}"
+        
         # Construct the complete chat completions API endpoint
         api_endpoint = f"{self.valves.base_url.rstrip('/')}/chat/completions"
         
@@ -62,17 +73,13 @@ class Tools:
             headers["Authorization"] = f"Bearer {self.valves.api_key}"
 
         payload = {
+            "model": model,
             "messages": [
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": query},
             ],
-            "temperature": 0.6,
-            "model": model,
+            "temperature": 0.1,
         }
-        
-        # Add high search context size for sonar models
-        if model and model.startswith("sonar"):
-            payload["web_search_options"] = {"search_context_size": "high"}
 
         try:
             # Use async HTTP client
