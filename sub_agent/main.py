@@ -27,7 +27,6 @@ class Tools:
         self,
         query: str,
         model: str,
-        system_message: str,
         __event_emitter__=None,
     ) -> str:
         """
@@ -36,17 +35,15 @@ class Tools:
         Model Selection Guide:
         - Need to write complex code or solve advanced programming problems use "anthropic/claude-sonnet-4.5"
         - Need to search the web for current information, use "perplexity/sonar" with a simple question in the prompt
-        - Need a well researched answer from the internet, use "perplexity/sonar" with multiple simple but related questions or one complex question
+        - Need a well researched answer from the internet, use "perplexity/sonar-pro-search" with multiple simple but related questions or one complex question
 
         Best practices:
-        - Keep system_message concise but specific about the desired output format and approach
         - For code generation, specify language, frameworks, and expected functionality
         - For web searches, include specific keywords and time-sensitive context if relevant
         - Avoid chaining multiple unrelated topics in a single query
 
         :param query: The detailed instructions or question for the external model (required)
         :param model: OpenRouter model identifier (required)
-        :param system_message: Instructions that guide the external model's behavior and approach (optional)
         :return: The complete response from the external model
         """
 
@@ -54,11 +51,21 @@ class Tools:
         allowed_models = [
             "anthropic/claude-sonnet-4.5",
             "perplexity/sonar",
-            "perplexity/sonar-pro",
+            "perplexity/sonar-pro-search",
         ]
         
         if model not in allowed_models:
             return f"Error: Model '{model}' is not in the allowed list. Allowed models: {', '.join(allowed_models)}"
+        
+        # Define system messages based on the model
+        if model == "anthropic/claude-sonnet-4.5":
+            system_message = "You are an expert code writing llm sub_agent. You are called upon by a architect agent to produce code snippets. Provide clear, well-structured code solutions with concise and simple explanations. Follow best practices and write idiomatic code."
+        elif model == "perplexity/sonar":
+            system_message = "You are a helpful research llm sub_agent. You are called upon by a architect agent to provide accurate, current information from the web. Keep your responses concise, to the point, and token-efficient."
+        elif model == "perplexity/sonar-pro-search":
+            system_message = "You are an advanced research llm sub_agent. You are called upon by a architect agent to provide comprehensive, well-researched answers with detailed analysis. Keep your responses concise, to the point, and token-efficient."
+        else:
+            system_message = "You are a helpful AI assistant."
         
         # Construct the complete chat completions API endpoint
         api_endpoint = f"{self.valves.base_url.rstrip('/')}/chat/completions"
